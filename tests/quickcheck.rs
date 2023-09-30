@@ -11,6 +11,8 @@ extern crate odds;
 
 mod utils;
 
+use petgraph::algo::bridges;
+use petgraph::algo::connected_components;
 use utils::{Small, Tournament};
 
 use odds::prelude::*;
@@ -1374,5 +1376,28 @@ quickcheck! {
         let max_flow_constaint = (sum_flows(&gr, &flows, source, Direction::Outgoing) == max_flow)
             && (sum_flows(&gr, &flows, destination, Direction::Incoming) == max_flow);
         return capacity_constraint && flow_conservation_constraint && max_flow_constaint;
+    }
+}
+
+quickcheck! {
+    fn test_bridges(g: Graph<(), (), Undirected>) -> bool {
+        let num = connected_components(&g);
+        let br = bridges(&g).map(|edge| edge.id()).collect::<HashSet<_>>();
+
+        for &edge in &br {
+            let mut graph = g.clone();
+            graph.remove_edge(edge);
+            assert_eq!(connected_components(&graph), num+1);
+        }
+
+        for e in g.edge_references() {
+            if !br.contains(&e.id()) {
+               let mut graph = g.clone();
+               graph.remove_edge(e.id());
+               assert_eq!(connected_components(&graph), num);
+           }
+        }
+
+        true
     }
 }
